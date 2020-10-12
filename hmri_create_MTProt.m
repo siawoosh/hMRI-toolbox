@@ -770,7 +770,11 @@ for p = 1:dm(3)
         if mpm_params.errormaps && T1widx
             [dR1,Atmp] = hmri_make_dR1(PDw,T1w,Edata.PDw,Edata.T1w,fa_pdw_rad,fa_t1w_rad,TR_pdw,TR_t1w,f_T,R1,V_pdw(1),threshall);
             NEpara(T1widx).dat(:,:,p) = Atmp;
-            NSMpara(T1widx).dat(:,:,p) = tmp./Atmp.*(Atmp>threshall.dR1); % has to become a default
+            tmp1 = tmp./Atmp.*(Atmp>threshall.dR1);
+            
+            tmp1 = max(min(tmp1,threshall.SMT1),-threshall.SMT1);
+            tmp1(abs(tmp1)==threshall.SMT1) = 0;
+            NSMpara(T1widx).dat(:,:,p) = tmp1; 
         end
     end
     spm_progress_bar('Set',p);
@@ -865,7 +869,10 @@ for p = 1:dm(3)
             A_forMT = T1_forMT .* (T1w * fa_t1w_rad / 2 / TR_t1w) + (T1w / fa_t1w_rad);
             [dPD,AdPD] = hmri_make_dPD(PDw,T1w,Edata.PDw,Edata.T1w,fa_pdw_rad,fa_t1w_rad,TR_pdw,TR_t1w,A_forMT,V_pdw(1),f_T,threshall);
             NEpara(PDwidx).dat(:,:,p) = AdPD;
-            NSMpara(PDwidx).dat(:,:,p) = tmp./AdPD.*(AdPD>1e-2); % has to become a default
+            tmp1 = tmp./AdPD.*(AdPD>1e-2);
+            tmp1 = max(min(tmp1,threshall.SMPD),-threshall.SMPD);
+            tmp1(abs(tmp1)==threshall.SMPD) = 0;
+            NSMpara(PDwidx).dat(:,:,p) = tmp1; % has to become a default
         end
         % for MT maps calculation, one needs MTw images on top of the T1w
         % and PDw ones...
@@ -900,7 +907,10 @@ for p = 1:dm(3)
             Nmap(mpm_params.qMT).dat(:,:,p) = tmp;
             
             if mpm_params.errormaps && MTwidx && T1widx
-                NSMpara(MTwidx).dat(:,:,p) = tmp./(AdMT*100).*(AdMT*100>1e-4); % has to become a default
+                tmp1 = tmp./(AdMT*100).*(AdMT*100>1e-4);
+                tmp1 = max(min(tmp1,threshall.SMMT),-threshall.SMMT);
+                tmp1(abs(tmp1)==threshall.SMMT) = 0;
+                NSMpara(MTwidx).dat(:,:,p) = tmp1; % has to become a default
             end
         end
     

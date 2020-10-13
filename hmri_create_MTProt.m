@@ -768,10 +768,13 @@ for p = 1:dm(3)
         tmp      = min(max(R1,-threshall.R1),threshall.R1)*0.001; % truncating images
         Nmap(mpm_params.qR1).dat(:,:,p) = tmp; 
         if mpm_params.errormaps && T1widx
-            [dR1,Atmp] = hmri_make_dR1(PDw,T1w,Edata.PDw,Edata.T1w,fa_pdw_rad,fa_t1w_rad,TR_pdw,TR_t1w,f_T,R1,V_pdw(1),threshall);
+            [dR1,Atmp]  = hmri_make_dR1(PDw,T1w,Edata.PDw,Edata.T1w,fa_pdw_rad,fa_t1w_rad,TR_pdw,TR_t1w,f_T,R1,V_pdw(1),threshall);
+            Atmp(Atmp<0)  = 0; 
+            Atmp         = min(max(Atmp,-threshall.R1),threshall.R1); % truncating error maps
             NEpara(T1widx).dat(:,:,p) = Atmp;
-            tmp1 = tmp./Atmp.*(Atmp>threshall.dR1);
             
+            % standardized maps
+            tmp1 = tmp./Atmp.*(Atmp>threshall.dR1);            
             tmp1 = max(min(tmp1,threshall.SMT1),-threshall.SMT1);
             tmp1(abs(tmp1)==threshall.SMT1) = 0;
             NSMpara(T1widx).dat(:,:,p) = tmp1; 
@@ -857,6 +860,7 @@ for p = 1:dm(3)
             A = T1 .* (T1w_forA * fa_t1w_rad / 2 / TR_t1w) + (T1w_forA / fa_t1w_rad);
         end
         
+        % truncate PD maps
         tmp      = A;
         tmp(isinf(tmp)) = 0;
         tmp             = max(min(tmp,threshall.A),-threshall.A);
@@ -868,7 +872,13 @@ for p = 1:dm(3)
                 max((T1w * (fa_t1w_rad / 2 / TR_t1w)) - (PDw * fa_pdw_rad / 2 / TR_pdw),eps);
             A_forMT = T1_forMT .* (T1w * fa_t1w_rad / 2 / TR_t1w) + (T1w / fa_t1w_rad);
             [dPD,AdPD] = hmri_make_dPD(PDw,T1w,Edata.PDw,Edata.T1w,fa_pdw_rad,fa_t1w_rad,TR_pdw,TR_t1w,A_forMT,V_pdw(1),f_T,threshall);
+            
+            % truncate PD error maps
+            AdPD(isinf(AdPD)) = 0;
+            AdPD             = max(min(AdPD,threshall.A),-threshall.A);
             NEpara(PDwidx).dat(:,:,p) = AdPD;
+            
+            % truncate standarized PD maps
             tmp1 = tmp./AdPD.*(AdPD>1e-2);
             tmp1 = max(min(tmp1,threshall.SMPD),-threshall.SMPD);
             tmp1(abs(tmp1)==threshall.SMPD) = 0;
@@ -890,6 +900,8 @@ for p = 1:dm(3)
                 if (~isempty(f_T))&&(~mpm_params.UNICORT.R1 || mpm_params.UNICORT.MT)
                     AdMT = AdMT .* (1 - 0.4) ./ (1 - 0.4 * f_T);
                 end
+                % truncate MT error maps
+                AdMT = max(min(AdMT,threshall.MT),-threshall.MT);
                 NEpara(MTwidx).dat(:,:,p) = AdMT*100;  
             end
             
@@ -902,12 +914,14 @@ for p = 1:dm(3)
                 MT = MT .* (1 - 0.4) ./ (1 - 0.4 * f_T);
             end
             
+            % truncate MT maps
             tmp      = MT;
             tmp = max(min(tmp,threshall.MT),-threshall.MT);
             Nmap(mpm_params.qMT).dat(:,:,p) = tmp;
             
             if mpm_params.errormaps && MTwidx && T1widx
                 tmp1 = tmp./(AdMT*100).*(AdMT*100>1e-4);
+                % truncate standarized MT maps
                 tmp1 = max(min(tmp1,threshall.SMMT),-threshall.SMMT);
                 tmp1(abs(tmp1)==threshall.SMMT) = 0;
                 NSMpara(MTwidx).dat(:,:,p) = tmp1; % has to become a default

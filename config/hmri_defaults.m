@@ -429,6 +429,9 @@ if hmri_def.errormaps
     hmri_def.qMRI_maps_thresh.dPD = 1e-2;
     hmri_def.qMRI_maps_thresh.dMT = 1e-4;
     hmri_def.qMRI_maps_thresh.dR2s= 1e-6;
+    hmri_def.qMRI_maps_thresh.SMT1= 1e3;
+    hmri_def.qMRI_maps_thresh.SMPD= 1e3;
+    hmri_def.qMRI_maps_thresh.SMMT= 1e3;
 end
 
 end

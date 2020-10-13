@@ -208,7 +208,7 @@ hmri_def.RFsens.smooth_kernel = 12;
 % quantitative maps: quality evaluation and realignment to MNI
 %--------------------------------------------------------------------------
 % creates a matlab structure containing markers of data quality
-hmri_def.qMRI_maps.QA          = 1; 
+hmri_def.qMRI_maps.QA          = 0; 
 % realigns qMRI maps to MNI: the following parameter corresponds to the
 % realignment implemented as part of the map calculation (see
 % hmri_create_MTProt.m). Left here for backward compatibility. It is
@@ -229,12 +229,12 @@ hmri_def.qMRI_maps.ACPCrealign = 0;
 % the statistical results.
 % ADVANCED USER ONLY.
 %--------------------------------------------------------------------------
-hmri_def.qMRI_maps_thresh.R1       = 2000; % 1000*[s-1]
-hmri_def.qMRI_maps_thresh.A        = 10^5; % [a.u.] based on input images with intensities ranging approx. [0 4096].
+hmri_def.qMRI_maps_thresh.R1       = 5e4; % 1000*[s-1]
+hmri_def.qMRI_maps_thresh.A        = 10^6; % [a.u.] based on input images with intensities ranging approx. [0 4096].
 hmri_def.qMRI_maps_thresh.R2s      = 10;   % 1000*[s-1]
 hmri_def.qMRI_maps_thresh.MTR      = 50;
 hmri_def.qMRI_maps_thresh.MTR_synt = 50;
-hmri_def.qMRI_maps_thresh.MT       = 5;    % [p.u.]
+hmri_def.qMRI_maps_thresh.MT       = 10;    % [p.u.]
 
 %--------------------------------------------------------------------------
 % MPM acquisition parameters and RF spoiling correction parameters
@@ -383,8 +383,16 @@ hmri_def.imperfectSpoilCorr.Unknown.enabled = false;
 % hMRI-Toolbox\config\hmri_b1_standard_defaults.m. 
 % See examples of local customization in the hMRI-Toolbox\config\local
 % directory. 
+% hmri_b1_standard_defaults.m.
 
-hmri_b1_standard_defaults;
+% use local b1 settings
+P = mfilename('fullpath');
+[pth,fname,ext] = spm_fileparts(P);
+oldpth = pwd;
+cd(pth)
+hmri_b1_local_defaults;
+cd(oldpth)
+
 %==========================================================================
 % Maps processing parameters
 %==========================================================================
@@ -417,7 +425,7 @@ hmri_def.proc.nGauss = [2 2 2 3 4 2]; % originally in SPM [1 1 2 3 4 2]
 hmri_def.errormaps  = true;
 hmri_def.hom        = false;
 hmri_def.qMRI_maps_thresh.R2sHO       = 1;    % [1/s^2]
-hmri_def.normPD     = true;
+hmri_def.normPD     = false;
 hmri_def.wols       = false;
 
 % these belong to the weighted least square fit
@@ -430,6 +438,9 @@ if hmri_def.errormaps
     hmri_def.qMRI_maps_thresh.dPD = 1e-2;
     hmri_def.qMRI_maps_thresh.dMT = 1e-4;
     hmri_def.qMRI_maps_thresh.dR2s= 1e-6;
+    hmri_def.qMRI_maps_thresh.SMT1= 1e3;
+    hmri_def.qMRI_maps_thresh.SMPD= 1e3;
+    hmri_def.qMRI_maps_thresh.SMMT= 1e3;
 end
 
 

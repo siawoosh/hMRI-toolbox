@@ -11,25 +11,15 @@ function hMRI_wcomb(PIn1,PIn2,Pw1,Pw2,PVG,PMSK)
 % Out:
 % 
 
-% defaults -> here we need to the mpm_default settings
-if(~exist('res','var'))
-    res = 1;
-end
-if(~exist('kt','var'))
-    kt = 20;
-end
-if(~exist('pval','var'))
-    pval = 0.70;
-end
-if(~exist('dummy_am','var'))
-    dummy_am = true;
-end
-if(~exist('smthk','var'))
-    smthk = 1;
-end
-if(~exist('dim','var'))
-    dim = 2;
-end
+wcombparams = hmri_get_defaults('wcombparams');
+res         = wcombparams.res;
+kt          = wcombparams.kt;
+dummy_am    = wcombparams.dummy_am;
+smthk       = wcombparams.smthk;
+dim         = wcombparams.dim;
+dummy_error = wcombparams.dummy_error;
+
+
 dt = [spm_type('float32'),spm_platform('bigend')]; % for nifti output
 
 
@@ -46,61 +36,104 @@ VIn1 = spm_vol(PIn1);
 VIn2 = spm_vol(PIn2);
 Vw1 = spm_vol(Pw1);
 Vw2 = spm_vol(Pw2);
+% define reference volume
+if exist('PVG','var') && ~isempty(PVG)
+    VG = spm_vol(PVG);
+else
+    VG = spm_vol(VIn1(1));    
+end
+
 if exist('PMSK','var') && ~isempty(PMSK)
     VMSK = spm_vol(PMSK);
-    AMSK = hMRI_read_vols(VMSK,VIn1(1),res,[],dim);
+    AMSK = hMRI_read_vols(VMSK,VG,res,[],dim);
 else
-    AMSK = ones(VIn1(1).dim);
+    AMSK = ones(VG.dim);
 end
+
 for inx = 1:size(VIn1,1)
-    % define reference volume
-    if exist('PVG','var') && ~isempty(PVG)
-        VG = spm_vol(PVG);
-    else
-        VG = spm_vol(VIn1(inx));    
-    end
     % define output volume
     Pout = spm_file(VIn1(inx).fname,'prefix','wa_');
     
     Ntmp = hMRI_create_nifti(Pout,VG,dt,deblank([VIn1(inx).descrip  ' - weighted combination']));
+    if dummy_error==true
+        Pout = spm_file(Vw1(inx).fname,'prefix','wa_');
+        Ntmperror = hMRI_create_nifti(Pout,VG,dt,deblank([VIn1(inx).descrip  ' - weighted combination error maps']));
+    end
     if dummy_am==true
         Pout = spm_file(VIn1(inx).fname,'prefix','am_');
         Ntmpam = hMRI_create_nifti(Pout,VG,dt,deblank([VIn1(inx).descrip  ' - arithmetic combination']));
     end
     spm_progress_bar('Init',VG.dim(3),Ntmp.descrip,'planes completed');
-    
-    % smooth weights
-    vxg         = sqrt(sum(VG.mat(1:3,1:3).^2));
-    smthk       = smthk.*vxg;
-    Aw1 = hMRI_read_vols(Vw1(inx),VG,res,[],dim);
-    Aw2 = hMRI_read_vols(Vw2(inx),VG,res,[],dim);
-    sAw1 = Aw1;
-    sAw2 = Aw2;
-    spm_smooth (sAw1,Aw1, smthk);
-    spm_smooth (sAw2,Aw2, smthk);
-    
+
+    if smthk>0
+        %     % smooth weights
+        vxg         = sqrt(sum(VG.mat(1:3,1:3).^2));
+        smthk       = smthk.*vxg;
+        Aw1 = hMRI_read_vols(Vw1(inx),VG,res,[],dim);
+        Aw2 = hMRI_read_vols(Vw2(inx),VG,res,[],dim);
+        sAw1 = Aw1;
+        sAw2 = Aw2;
+        spm_smooth (sAw1,Aw1, smthk);
+        spm_smooth (sAw2,Aw2, smthk);
+    end    
     for p = 1:VG.dim(dim)
         AIn1 = hMRI_read_vols(VIn1(inx),VG,res,p,dim);
         AIn2 = hMRI_read_vols(VIn2(inx),VG,res,p,dim);
-%         Aw1 = hMRI_read_vols(Vw1(inx),VG,res,p);
-%         Aw2 = hMRI_read_vols(Vw2(inx),VG,res,p);
-        Aw1 = sAw1(:,:,p);
-        Aw2 = sAw2(:,:,p);
-        
-        nAw1 = zeros(VG.dim(dplane));
-        nAw2 = zeros(VG.dim(dplane));
-        nAw1(abs(Aw1)>0) = abs(Aw1(abs(Aw1)>0))./(abs(Aw1(abs(Aw1)>0))+abs(Aw2(abs(Aw1)>0))+eps);        
-        nAw2(abs(Aw2)>0) = abs(Aw2(abs(Aw2)>0))./(abs(Aw1(abs(Aw2)>0))+abs(Aw2(abs(Aw2)>0))+eps);
-
-        f1 = local_fermi(nAw1(:),pval,kt,AMSK(:,:,p)); % we take 2- to down-weigh regions that have high res
-        f2 = local_fermi(nAw2(:),pval,kt,AMSK(:,:,p)); % we take 2- to down-weigh regions that have high res
-        Awavg = (AIn1(:).*f1 + AIn2(:).*f2)./(f1+f2);
-        
-        read_nifti_perm(Ntmp,reshape(Awavg,VG.dim(dplane)),dim,p)
         if dummy_am==true
-            Aam = (AIn1(:) + AIn2(:))./2;
-            read_nifti_perm(Ntmpam,reshape(Aam,VG.dim(dplane)),dim,p)    
+            Aam = (AIn1 + AIn2)./2;
+            read_nifti_perm(Ntmpam,reshape(Aam(:),VG.dim(dplane)),dim,p)    
         end
+        if smthk>0
+            Aw1 = sAw1(:,:,p);
+            Aw2 = sAw2(:,:,p);
+        else
+            Aw1 = hMRI_read_vols(Vw1(inx),VG,res,p,dim);
+            Aw2 = hMRI_read_vols(Vw2(inx),VG,res,p,dim);
+        end
+        if false
+            if p==1
+                f1on = figure;
+            end
+            if numel(find(AMSK(:,:,p)>0))<1e1
+                f1 = 1;
+                f2 = 1;
+            else
+
+                nAw1 = Aw1(AMSK(:,:,p)>0)./Aw2(AMSK(:,:,p)>0);
+                nAw1(nAw1<0)=1;
+                f1 = local_fermi(nAw1,kt,f1on,'k.'); % we take 1- to down-weigh regions that have high res
+            end
+            hold off;
+            if (p==85) && (inx==3)
+                disp('stop')
+            end
+            drawnow
+            
+            if p==VG.dim(dim)
+                close(f1on)
+            end
+        else
+            if numel(find(AMSK(:,:,p)>0))<1e1
+                f1 = 1;
+                f2 = 1;
+            else
+                nAw1 = Aw1(AMSK(:,:,p)>0)./Aw2(AMSK(:,:,p)>0);
+                nAw1(nAw1<0)=1;
+                f1 = local_fermi(nAw1,kt); % we take 1- to down-weigh regions that have high res           
+            end
+        end
+
+        Awavg = zeros(VG.dim(dplane));
+        if ~isempty(find(AMSK(:,:,p)>0))
+            Awavg(AMSK(:,:,p)>0) = (AIn1(AMSK(:,:,p)>0).*f1 + AIn2(AMSK(:,:,p)>0).*(max(f1)-f1))./max(f1);
+        end
+        read_nifti_perm(Ntmp,reshape(Awavg,VG.dim(dplane)),dim,p)
+
+        Awerr = zeros(VG.dim(dplane));
+        if dummy_error
+            Awerr(AMSK(:,:,p)>0) = (Aw1(AMSK(:,:,p)>0).*f1 + Aw2(AMSK(:,:,p)>0).*(max(f1)-f1))./max(f1);
+        end
+        read_nifti_perm(Ntmperror,reshape(Awerr,VG.dim(dplane)),dim,p)
         
         spm_progress_bar('Set',p);
     end
@@ -109,19 +142,19 @@ end
 
 end
 
-function f= local_fermi(x,pval,kt,AMSK)
-% This is a fermi function that goes from 0 to 2 at the point x0. kt
-% provides the steepness with which the transition is done.
+function f= local_fermi(x,kt,f1,symb)
+% This is a fermi function that goes from 1 to 0 at the point 1. kt provides the steepness 
+% with which the transition is done.
 % S.Mohammadi 2.10.2019
-    if isempty(find(AMSK>0))
-        f = 1;
-    else
-        [ybin,xbin] = hist(x(AMSK>0),100);
+    f = 1./(exp((x-1)/kt)+1);
 
-        tmp = find(cumsum(ybin)>(1-pval)*sum(ybin));
-        x0 = xbin(tmp(1));
-        f= 2./(exp((abs(x)-x0).*kt)+1);
+    if exist('f1','var')
+        plot(x,f,symb);
+        xlim([0 5]);
+        set(gca,'fontsize', 20);
+        hold on;
     end
+    
 end
 
 function read_nifti_perm(Nif,A,dim,p)

@@ -132,7 +132,7 @@ hmri_def.segment.warp.write = [0 0];
 %--------------------------------------------------------------------------
 % The coregistration step can be disabled using the following flag (not
 % recommended). ADVANCED USER ONLY. 
-hmri_def.coreg2PDw = 1; 
+hmri_def.coreg2PDw = 0; 
 
 %--------------------------------------------------------------------------
 % Ordinary Least Squares & fit at TE=0
@@ -441,6 +441,14 @@ if hmri_def.errormaps
     hmri_def.qMRI_maps_thresh.SMT1= 1e3;
     hmri_def.qMRI_maps_thresh.SMPD= 1e3;
     hmri_def.qMRI_maps_thresh.SMMT= 1e3;
+    
+    % weighted combinration - see ... for details
+    hmri_def.wcombparams.kt         = 0.1;
+    hmri_def.wcombparams.res        = -4;
+    hmri_def.wcombparams.smthk      = 0;
+    hmri_def.wcombparams.dim        = 3;
+    hmri_def.wcombparams.dummy_am   = true;
+    hmri_def.wcombparams.dummy_error= true;
 end
 
 

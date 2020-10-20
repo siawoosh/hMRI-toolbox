@@ -424,6 +424,7 @@ hmri_def.wols       = false;
 hmri_def.wolsdef.thr_w0 = 1e-10; % regularization factor
 hmri_def.wolsdef.sigmaMPM = log(50); % noise - should go in via gui
 hmri_def.wolsdef.brainmask = '';
+% this belongs to the error maps
 if hmri_def.errormaps
     hmri_def.qMRI_maps_thresh.dR1 = 1e-4;
     hmri_def.qMRI_maps_thresh.dPD = 1e-2;
@@ -432,6 +433,14 @@ if hmri_def.errormaps
     hmri_def.qMRI_maps_thresh.SMT1= 1e3;
     hmri_def.qMRI_maps_thresh.SMPD= 1e3;
     hmri_def.qMRI_maps_thresh.SMMT= 1e3;
+
+    % weighted combinration - see ... for details
+    hmri_def.wcombparams.kt         = 0.1;
+    hmri_def.wcombparams.res        = -4;
+    hmri_def.wcombparams.smthk      = 0;
+    hmri_def.wcombparams.dim        = 3;
+    hmri_def.wcombparams.dummy_am   = true;
+    hmri_def.wcombparams.dummy_error= true;
 end
 
 end

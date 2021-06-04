@@ -32,7 +32,8 @@ end
 % Find the list of tissue classes considered
 l_TC = zeros(1,n_TCs);
 for ii = 1:n_TCs
-    tmp = regexp(job.vols_mwc{ii}{1},'mwc(\d)', 'tokens');
+    tmp = regexp(job.vols_mwc{ii}{1},'m*w.*c(\d)', 'tokens'); % SM
+%    tmp = regexp(job.vols_mwc{ii}{1},'mwc(\d)', 'tokens');
     l_TC(ii) = str2num(tmp{1}{1}); %#ok<*ST2NM>
 end 
 
